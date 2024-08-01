@@ -20,7 +20,6 @@ import { Expand } from '../types';
 import {
   AnyExtensionDataRef,
   ExtensionDataRef,
-  ExtensionDataRefToValue,
   ExtensionDataValue,
 } from './createExtensionDataRef';
 import { ExtensionInput, LegacyExtensionInput } from './createExtensionInput';
@@ -236,7 +235,6 @@ export type OverrideExtensionOptions<
   TConfig,
   TConfigInput,
   TConfigSchema extends { [key: string]: (zImpl: typeof z) => z.ZodType },
-  UOriginalFactoryOutput extends ExtensionDataValue<any, any>,
   TConfigSchemaOverrides extends {
     [key: string]: (zImpl: typeof z) => z.ZodType;
   },
@@ -264,9 +262,7 @@ export type OverrideExtensionOptions<
         [key in keyof TConfigSchema]: z.infer<ReturnType<TConfigSchema[key]>>;
       };
       inputs?: Expand<ResolvedExtensionInputs<TInputs>>;
-      // todo(blam): Think this is better as a DataContainer instead
-      // should probably update that everywhere.
-    }) => Iterable<UOriginalFactoryOutput>,
+    }) => ExtensionDataContainer<UOutput>,
     context: {
       node: AppNode;
       config: TConfig &
@@ -286,7 +282,7 @@ export type OverrideExtensionOptions<
   ): Iterable<UFactoryOverrideOutput>;
   // todo(blam): need to verify that the outputs are merged and verified properly.
 } & VerifyExtensionFactoryOutput<
-  UOutput & UFactoryOverrideOutput,
+  UOutput & UOutputOverrides,
   UFactoryOverrideOutput
 >;
 
@@ -302,7 +298,6 @@ export type OverridableExtension<
   TConfig,
   TConfigInput,
   TConfigSchema extends { [key: string]: (zImpl: typeof z) => z.ZodType },
-  UFactoryOutput extends ExtensionDataValue<any, any>,
 > = {
   override<
     TConfigSchemaOverrides extends {
@@ -317,7 +312,6 @@ export type OverridableExtension<
       TConfig,
       TConfigInput,
       TConfigSchema,
-      UFactoryOutput,
       TConfigSchemaOverrides,
       UOutputOverrides,
       UFactoryOverrideOutput
@@ -421,14 +415,7 @@ export function createExtension<
           }>
         >)
 > &
-  OverridableExtension<
-    UOutput,
-    TInputs,
-    TConfig,
-    TConfigInput,
-    TConfigSchema,
-    UFactoryOutput
-  >;
+  OverridableExtension<UOutput, TInputs, TConfig, TConfigInput, TConfigSchema>;
 /**
  * @public
  * @deprecated - use the array format of `output` instead, see TODO-doc-link
@@ -509,14 +496,7 @@ export function createExtension<
           }>
         >)
 > &
-  OverridableExtension<
-    UOutput,
-    TInputs,
-    TConfig,
-    TConfigInput,
-    TConfigSchema,
-    UFactoryOutput
-  > {
+  OverridableExtension<UOutput, TInputs, TConfig, TConfigInput, TConfigSchema> {
   const newConfigSchema = options.config?.schema;
   if (newConfigSchema && options.configSchema) {
     throw new Error(`Cannot provide both configSchema and config.schema`);
